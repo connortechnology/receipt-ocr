@@ -3,6 +3,7 @@ import os
 
 import cv2
 import imutils
+import numpy as np
 import pytesseract
 from imutils.perspective import four_point_transform
 
@@ -24,19 +25,46 @@ def main():
     image = imutils.resize(image, width=500)
     ratio = img_orig.shape[1] / float(image.shape[1])
 
-    # convert the image to grayscale, blur it slightly, and then apply
-    # edge detection
+    # convert the image to grayscale, blur it slightly, and then apply # edge detection
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(
-        gray,
-        (
-            5,
-            5,
-        ),
-        0,
-    )
-    edged = cv2.Canny(blurred, 75, 200)
-    # cv2.imwrite("edged.jpg", edged)
+    cv2.imwrite("gray.jpg", gray)
+
+    # Apply adaptive thresholding to filter out noise and enhance text visibility
+    #image = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 41)
+    image = gray
+    #cv2.imwrite("filtered.jpg", image)
+
+    # Define a kernel for morphological operations (erosion and dilation)
+    kernel = np.ones((1, 1), np.uint8)
+
+    # Perform morphological opening to remove small noise regions
+    image = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
+    cv2.imwrite("opening.jpg", image)
+
+    # Perform morphological closing to fill gaps in text regions
+    closing = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+    cv2.imwrite("closing.jpg", closing)
+
+
+    ret1, th1 = cv2.threshold(gray, 88, 255, cv2.THRESH_BINARY)
+    cv2.imwrite("th1.jpg", th1)
+    #ret2, th2 = cv2.threshold(th1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #cv2.imwrite("th2.jpg", th2)
+    #blurred = cv2.GaussianBlur(
+    #    th2,
+    #    (
+    #        5,
+    #        5,
+    #    ),
+    #    0,
+    #)
+    or_image = cv2.bitwise_or(th1, closing)
+    cv2.imwrite("or.jpg", or_image)
+    #cv2.imwrite("blurred.jpg", blurred)
+    #ret3, th3 = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #edged = cv2.Canny(th1, 75, 200)
+    edged = or_image
+    cv2.imwrite("edged.jpg", edged)
 
     # find contours in the edge map and sort them by size in descending
     # order
